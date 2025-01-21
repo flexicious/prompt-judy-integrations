@@ -10,9 +10,10 @@ export interface Sqlite3Query {
 }
 
 export const getRowsFromSqlite = async<T>(query: string, params: any): Promise<T[]> => {
+    const cleanedSql = query.replace(/```sql/g, "").replace(/```/g, "").replace(/\n/g, " ");
     const db = getDb();
     const rows = await new Promise((resolve, reject) => {
-        db.all(query, params, (err: Error, rows: T[]) => {
+        db.all(cleanedSql, params, (err: Error, rows: T[]) => {
             if (err) {
                 reject(err);
             } else {
