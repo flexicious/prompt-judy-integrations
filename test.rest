@@ -1,0 +1,1 @@
+curl -X POST http://localhost:3001/api/evaluate-response -H "Content-Type: application/json" -d '{"expectedResponse": "SELECT * FROM users WHERE id = 1", "actualResponse": "SELECT * FROM users WHERE id = 1"}'

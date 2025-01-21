@@ -1,57 +1,52 @@
-import { HumanMessage } from "@langchain/core/messages";
-import { BedrockChat } from "@langchain/community/chat_models/bedrock";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 
-import * as express from 'express';
+export const callLLM = async ({
+  prompt,
+  model,
+  configuration,
+}: {
+  prompt: string;
+  model: string;
+  configuration?: {
+    temperature?: number;
+    maxTokens?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+  };
+}) => {
+  const { temperature, maxTokens, frequencyPenalty, presencePenalty } = configuration || {};
+  try {
 
-export const callLLMRouter = express.Router();
 
-callLLMRouter.post('/', async (req, res) => {
-    const response = await callLLM(req.body);
-    res.send(response);
-});
-
-
-
-export interface CallLLMRequest {
-    messages: HumanMessage[];
-    model: string;
-    temperature: number;
-    maxTokens: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
-}
-const callLLM = async (requestBody: string) => {
-    try {
-        const {
-            messages,
-            model,
-            temperature,
-            maxTokens,
-            frequencyPenalty,
-            presencePenalty,
-        } = JSON.parse(requestBody) as CallLLMRequest;
-
-        const chat = new BedrockChat({
-            model: model || "anthropic.claude-3-5-sonnet-20241022-v2:0", // Default to Claude v2
-            region: process.env.AWS_REGION || "us-east-1",
-            // credentials: {
-            //     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-            // }, // Uncomment this if you want to use AWS credentials from environment variables 
-            // otherwise it will use credentials from the ~/.aws/credentials file
-            temperature: temperature,
-            maxTokens: maxTokens,
-            modelKwargs: {
-                frequency_penalty: frequencyPenalty,
-                presence_penalty: presencePenalty,
-            },
-        });
-
-        const response = await chat.invoke(messages);
-
-        return JSON.stringify({ response });
-    } catch (error) {
-        console.error("Error calling LLM:", error);
-        return JSON.stringify({ error: "Failed to call LLM" });
+    if (!model) {
+      throw new Error("Model is required");
     }
-} 
+
+
+    const llm = new ChatGoogleGenerativeAI({
+      model,
+      temperature: temperature || 0,
+      maxRetries: 2,
+      apiKey: process.env.GEMINI_API_KEY,
+    });
+
+    const startTime = new Date();
+    const result = await llm.invoke(["human", prompt]);
+    const resultText = result.content;
+
+    const duration = new Date().getTime() - startTime.getTime();
+
+    return {
+      content: resultText,
+      duration: duration,
+      tokenUsage: {
+        inputTokens: result.usage_metadata?.input_tokens,
+        outputTokens: result.usage_metadata?.output_tokens,
+        totalTokens: result.usage_metadata?.total_tokens,
+      },
+    };
+  } catch (error) {
+    console.error("Error calling LLM:", error);
+    throw new Error("Error calling LLM");
+  }
+};
