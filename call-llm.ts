@@ -1,4 +1,4 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { callLangChainPrompt } from "./llm/langchain";
 
 export const callLLM = async ({
   prompt,
@@ -21,30 +21,17 @@ export const callLLM = async ({
     if (!model) {
       throw new Error("Model is required");
     }
-
-
-    const llm = new ChatGoogleGenerativeAI({
-      model,
-      temperature: temperature || 0,
-      maxRetries: 2,
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-
-    const startTime = new Date();
-    const result = await llm.invoke(["human", prompt]);
-    const resultText = result.content;
-
-    const duration = new Date().getTime() - startTime.getTime();
-
-    return {
-      content: resultText,
-      duration: duration,
-      tokenUsage: {
-        inputTokens: result.usage_metadata?.input_tokens,
-        outputTokens: result.usage_metadata?.output_tokens,
-        totalTokens: result.usage_metadata?.total_tokens,
+    const result = await callLangChainPrompt({
+      modelName: model,
+      prompt,
+      llmConfig: {
+        temperature: temperature || 0,
+        maxTokens: maxTokens || 1000,
+        frequencyPenalty: frequencyPenalty || 0,
+        presencePenalty: presencePenalty || 0,
       },
-    };
+    });
+    return result;
   } catch (error) {
     console.error("Error calling LLM:", error);
     throw new Error("Error calling LLM");

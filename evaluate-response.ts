@@ -31,11 +31,19 @@ export const evaluateResponse = async ({
   }
 
   const expectedResult = await getRowsFromSqlite(expectedResponse, [])
-  const actualResult = await getRowsFromSqlite(actualResponse, []);
+  let actualResult = [];
+  try {
+    actualResult = await getRowsFromSqlite(actualResponse, []);
+  } catch (e) {
+    return {
+      score: 0,
+      scoreDetails: `Error getting actual result: ${e.message}`,
+    };
+  }
   if (expectedResult.length !== actualResult.length) {
     return {
       score: 0,
-      scoreDetails: `Expected result length ${expectedResult.length} does not match actual result length ${actualResult.length}`,
+      scoreDetails: `Expected result length: ${expectedResult.length}, Actual result length: ${actualResult.length}`,
     };
   }
   if (expectedResult.length === 0 && actualResult.length === 0) {
@@ -56,14 +64,14 @@ export const evaluateResponse = async ({
     const score = expectedValue === actualValue ? 100 : 0;
     return {
       score: score,
-      scoreDetails: `Expected value ${expectedValue} matches actual value ${actualValue}`,
+      scoreDetails: `Expected value: ${expectedValue}, Actual value: ${actualValue}`,
     };
   }
 
 
   return {
     score: 100,
-    scoreDetails: `Expected result length ${expectedResult.length} matches actual result length ${actualResult.length}`,
+    scoreDetails: `Expected result length: ${expectedResult.length}, Actual result length: ${actualResult.length}`,
   }
   // Uncomment below if you want to introspect the objects in detail.
 

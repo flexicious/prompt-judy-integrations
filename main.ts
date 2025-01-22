@@ -13,6 +13,7 @@ import {
 import { runEvaluation } from "./utils";
 import { evaluateResponse } from "./evaluate-response";
 import { callLLM } from "./call-llm";
+import { getAllModelIdentifiers } from "./llm/langchain";
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +99,10 @@ app.post("/process-upload", async (req, res) => {
         evaluationRunResults.push(result);
     }
     res.send(evaluationRunResults);
+});
+
+app.get("/models", (req, res) => {
+    res.send(getAllModelIdentifiers());
 });
 
 // Start server
