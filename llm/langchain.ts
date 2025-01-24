@@ -161,7 +161,9 @@ export async function callLangChainPrompt({
         tokenUsage = {
             inputTokens: response.usage_metadata.input_tokens,
             outputTokens: response.usage_metadata.output_tokens,
-            totalTokens: response.usage_metadata.total_tokens
+            totalTokens: response.usage_metadata.total_tokens,
+            cacheReadInputTokens: response.usage_metadata.input_token_details?.cache_read,
+            cacheCreationInputTokens: response.usage_metadata.input_token_details?.cache_creation,
         };
     } else if (metadata?.["tokenUsage"]) {
         const usage = metadata["tokenUsage"];
@@ -268,6 +270,7 @@ export const invokeModel = async (
                     googleAICacheManager = new GoogleAICacheManager(getEnv(`GEMINI_API_KEY`));
                 }
                 let [cachedContent, expirationDate] = googleGeminiCachedItems.get(`${systemPrompt}-${staticPart}`) || [null, null];
+                let creationTokens = 0;
                 if (!cachedContent || expirationDate < new Date()) {
                     const ttlSeconds = 60;
                     const modelId = modelIdentifier.replace('google-gemini/', 'models/');
@@ -289,6 +292,8 @@ export const invokeModel = async (
                         ttlSeconds,
                     });
                     googleGeminiCachedItems.set(`${systemPrompt}-${staticPart}`, [cachedContent, new Date(Date.now() + ttlSeconds * 1000)]);
+                    //@ts-ignore - Google gemini does not really expose this via types :-<
+                    creationTokens = cachedContent.usageMetadata.totalTokenCount;
                 }
                 const genAI = new GoogleGenerativeAI(getEnv(`GEMINI_API_KEY`));
                 const genModel = genAI.getGenerativeModelFromCachedContent(cachedContent);
@@ -312,7 +317,8 @@ export const invokeModel = async (
                         inputTokens: metadata.promptTokenCount,
                         outputTokens: metadata.candidatesTokenCount,
                         totalTokens: metadata.totalTokenCount,
-                        cacheReadInputTokens: metadata.cachedContentTokenCount
+                        cacheReadInputTokens: metadata.cachedContentTokenCount,
+                        cacheCreationInputTokens: creationTokens,
                     },
                     duration: 0
                 };
