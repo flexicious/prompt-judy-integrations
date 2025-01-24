@@ -8,6 +8,7 @@ export interface PromptTemplateVersion {
   promptTemplateId: string;
   version: number;
   prompt: string;
+  systemPrompt?: string;
   tags?: string;
 }
 export interface EvaluationDataSet {
@@ -37,7 +38,12 @@ export interface EvaluationRunResultWithoutScore
   extends Omit<EvaluationRunResult, "score" | "scoreDetails"> { }
 
 export interface PrivateLLMRequest {
+  systemPrompt?: string;
   prompt: string;
+  promptParts?: {
+    staticPart?: string;
+    dynamicPart?: string;
+  };
   model: string;
   evaluationDataSetRow: EvaluationDataSetRow;
   promptTemplateVersion: PromptTemplateVersion;

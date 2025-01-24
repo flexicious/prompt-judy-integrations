@@ -1,12 +1,20 @@
+import { LLMProviderEnum } from "llm/types";
 import { callLangChainPrompt } from "./llm/langchain";
 
 export const callLLM = async ({
   prompt,
   model,
+  systemPrompt,
+  promptParts,
   configuration,
 }: {
   prompt: string;
   model: string;
+  systemPrompt?: string;
+  promptParts?: {
+    staticPart?: string;
+    dynamicPart?: string;
+  };
   configuration?: {
     temperature?: number;
     maxTokens?: number;
@@ -22,7 +30,9 @@ export const callLLM = async ({
       throw new Error("Model is required");
     }
     const result = await callLangChainPrompt({
-      modelName: model,
+      modelIdentifier: model,
+      systemPrompt,
+      promptParts,
       prompt,
       llmConfig: {
         temperature: temperature || 0,
