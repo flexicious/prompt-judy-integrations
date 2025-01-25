@@ -1,5 +1,5 @@
-import { LLMProviderEnum } from "llm/types";
-import { callLangChainPrompt } from "./llm/langchain";
+import { LLMProviderEnum } from "./llm/types";
+import { callLlmPrompt } from "./llm/llmProxy";
 
 export const callLLM = async ({
   prompt,
@@ -12,8 +12,8 @@ export const callLLM = async ({
   model: string;
   systemPrompt?: string;
   promptParts?: {
-    staticPart?: string;
-    dynamicPart?: string;
+    staticPart: string;
+    dynamicPart: string;
   };
   configuration?: {
     temperature?: number;
@@ -29,8 +29,10 @@ export const callLLM = async ({
     if (!model) {
       throw new Error("Model is required");
     }
-    const result = await callLangChainPrompt({
-      modelIdentifier: model,
+    const provider = model.split('/')[0];
+    const modelIdentifier = model.split('/')[1];
+    const result = await callLlmPrompt(provider as LLMProviderEnum, {
+      modelName: modelIdentifier,
       systemPrompt,
       promptParts,
       prompt,

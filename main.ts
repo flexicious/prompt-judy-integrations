@@ -13,8 +13,7 @@ import {
 import { runEvaluation } from "./utils";
 import { evaluateResponse } from "./evaluate-response";
 import { callLLM } from "./call-llm";
-import { getAllModelIdentifiers } from "./llm/langchain";
-
+import { getAllModelIdentifiers } from "./llm/llmProxy";
 // Load environment variables
 dotenv.config();
 

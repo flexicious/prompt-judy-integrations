@@ -5,6 +5,7 @@ export enum LLMProviderEnum {
     AwsBedrock = "aws-bedrock",
     Together = "together",
     Groq = "groq",
+    OpenRouter = "openrouter",
 }
 export const LLMModels = {
     [LLMProviderEnum.OpenAI]: [
@@ -33,6 +34,9 @@ export const LLMModels = {
         "gemini-exp-1206"
     ],
     [LLMProviderEnum.AwsBedrock]: [
+        "amazon.nova-lite-v1:0",
+        "amazon.nova-micro-v1:0",
+        "amazon.nova-pro-v1:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-haiku-20240307-v1:0",
@@ -100,6 +104,51 @@ export const LLMModels = {
         "llama3-70b-8192",
         "llama3-8b-8192",
         "mixtral-8x7b-32768"
+    ],
+    [LLMProviderEnum.OpenRouter]: [
+        "databricks/dbrx-instruct",
+        "deepseek/deepseek-chat-v2.5",
+        "deepseek/deepseek-chat",
+        "cognitivecomputations/dolphin-mixtral-8x7b",
+        "cognitivecomputations/dolphin-mixtral-8x22b",
+        "eva-unit-01/eva-llama-3.33-70b",
+        "eva-unit-01/eva-qwen-2.5-32b",
+        "eva-unit-01/eva-qwen-2.5-72b",
+        "qwen/qwen-2-72b-instruct",
+        "qwen/qwen-2-7b-instruct",
+        "qwen/qwen-2-7b-instruct:free",
+        "qwen/qwen-2-vl-72b-instruct",
+        "qwen/qwen-2-vl-7b-instruct",
+        "qwen/qwen-2.5-72b-instruct",
+        "qwen/qwen-2.5-7b-instruct",
+        "qwen/qwen-2.5-coder-32b-instruct",
+        "qwen/qvq-72b-preview",
+        "qwen/qwq-32b-preview",
     ]
-
 };
+
+export interface TokenUsage {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    cacheReadInputTokens?: number;
+    cacheCreationInputTokens?: number;
+}
+
+export interface LLMConfig {
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+}
+export interface LLMPromptParams {
+    modelName: string;
+    prompt: string;
+    systemPrompt?: string;
+    promptParts?: {
+        staticPart: string;
+        dynamicPart: string;
+    };
+    llmConfig: LLMConfig;
+}

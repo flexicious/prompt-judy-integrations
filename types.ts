@@ -41,8 +41,8 @@ export interface PrivateLLMRequest {
   systemPrompt?: string;
   prompt: string;
   promptParts?: {
-    staticPart?: string;
-    dynamicPart?: string;
+    staticPart: string;
+    dynamicPart: string;
   };
   model: string;
   evaluationDataSetRow: EvaluationDataSetRow;
