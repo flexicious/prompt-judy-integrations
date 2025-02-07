@@ -1,10 +1,6 @@
-import { callLLM } from "./call-llm";
-import { evaluateResponse } from "./evaluate-response";
-import {
-  EvaluationRunResult,
-  EvaluationRunResultWithoutScore,
-  PrivateLLMEvaluationRequest,
-} from "./types";
+import { callLLM } from './call-llm';
+import { evaluateResponse } from './evaluate-response';
+import { EvaluationRunResult, EvaluationRunResultWithoutScore, PrivateLLMEvaluationRequest } from './types';
 
 export const runEvaluation = async (body: PrivateLLMEvaluationRequest) => {
   const response = await callLLM({
@@ -21,9 +17,7 @@ export const runEvaluation = async (body: PrivateLLMEvaluationRequest) => {
     actualResponse: response.content as string,
     expectedResponse: body.evaluationDataSetRow.expectedResponse,
   });
-  const evaluationRunResult:
-    | EvaluationRunResult
-    | EvaluationRunResultWithoutScore = {
+  const evaluationRunResult: EvaluationRunResult | EvaluationRunResultWithoutScore = {
     score: evaluationResult.score || 0,
     scoreDetails: evaluationResult.scoreDetails,
     content: response.content as string,

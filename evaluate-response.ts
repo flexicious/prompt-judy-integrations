@@ -1,36 +1,30 @@
-import { callLLM } from "./call-llm";
-import { getRowsFromSqlite } from "./sqlite";
+import { callLLM } from './call-llm';
+import { getRowsFromSqlite } from './sqlite';
 
 const mappingCache = new Map<string, string>();
-export const evaluateResponse = async ({
-  expectedResponse,
-  actualResponse,
-}: {
-  expectedResponse: string;
-  actualResponse: string;
-}) => {
+export const evaluateResponse = async ({ expectedResponse, actualResponse }: { expectedResponse: string; actualResponse: string }) => {
   if (!expectedResponse || !actualResponse) {
     return {
       score: 0,
       scoreDetails: `Expected response or actual response is missing`,
     };
   }
-  if (expectedResponse == "Not Allowed") {
-    const score = actualResponse.trim() == "Not Allowed" ? 100 : 0;
+  if (expectedResponse == 'Not Allowed') {
+    const score = actualResponse.trim() == 'Not Allowed' ? 100 : 0;
     return {
       score: score,
-      scoreDetails: score == 100 ? "" : `Actual response was ${actualResponse}`,
+      scoreDetails: score == 100 ? '' : `Actual response was ${actualResponse}`,
     };
   }
-  if (expectedResponse === "Not Possible") {
-    const score = actualResponse.trim() === "Not Possible" ? 100 : 0;
+  if (expectedResponse === 'Not Possible') {
+    const score = actualResponse.trim() === 'Not Possible' ? 100 : 0;
     return {
       score: score,
-      scoreDetails: score == 100 ? "" : `Actual response was ${actualResponse}`,
+      scoreDetails: score == 100 ? '' : `Actual response was ${actualResponse}`,
     };
   }
 
-  const expectedResult = await getRowsFromSqlite(expectedResponse, [])
+  const expectedResult = await getRowsFromSqlite(expectedResponse, []);
   let actualResult = [];
   try {
     actualResult = await getRowsFromSqlite(actualResponse, []);
@@ -53,11 +47,16 @@ export const evaluateResponse = async ({
     };
   }
   //if the result is a single row with a single column, we can compare the values directly
-  if (expectedResult.length === 1 && actualResult.length === 1 && Object.keys(expectedResult[0]).length === 1 && Object.keys(actualResult[0]).length === 1) {
+  if (
+    expectedResult.length === 1 &&
+    actualResult.length === 1 &&
+    Object.keys(expectedResult[0]).length === 1 &&
+    Object.keys(actualResult[0]).length === 1
+  ) {
     let expectedValue = expectedResult[0][Object.keys(expectedResult[0])[0]];
     let actualValue = actualResult[0][Object.keys(actualResult[0])[0]];
     //if they are both numbers greater than 1, round to 2 decimal places
-    if (typeof expectedValue === "number" && typeof actualValue === "number" && expectedValue > 1 && actualValue > 1) {
+    if (typeof expectedValue === 'number' && typeof actualValue === 'number' && expectedValue > 1 && actualValue > 1) {
       expectedValue = expectedValue.toFixed(2);
       actualValue = actualValue.toFixed(2);
     }
@@ -68,11 +67,10 @@ export const evaluateResponse = async ({
     };
   }
 
-
   return {
     score: 100,
     scoreDetails: `Expected result length: ${expectedResult.length}, Actual result length: ${actualResult.length}`,
-  }
+  };
   // Uncomment below if you want to introspect the objects in detail.
 
   // const prompt = `You are an AI trying to determine two arrays of objects represent the same data.

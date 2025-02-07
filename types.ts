@@ -1,4 +1,4 @@
-import { ImageInfo } from "llm/types";
+import { ImageInfo } from 'llm/types';
 
 export interface PromptTemplate {
   name: string;
@@ -36,8 +36,7 @@ export interface EvaluationRunResult {
   };
 }
 
-export interface EvaluationRunResultWithoutScore
-  extends Omit<EvaluationRunResult, "score" | "scoreDetails"> { }
+export interface EvaluationRunResultWithoutScore extends Omit<EvaluationRunResult, 'score' | 'scoreDetails'> {}
 
 export interface PrivateLLMRequest {
   systemPrompt?: string;
@@ -60,7 +59,7 @@ export interface PrivateLLMEvaluationRequest extends PrivateLLMRequest {
   evaluationDataSetRow: EvaluationDataSetRow;
   promptTemplateVersion: PromptTemplateVersion;
   promptTemplate: PromptTemplate;
-  evaluationDataSet: EvaluationDataSet
+  evaluationDataSet: EvaluationDataSet;
   expectedResponse: string;
   actualResponse: string;
 }

@@ -1,20 +1,11 @@
-import { LLMProviderEnum } from "./llm/types";
-import { callLlmPrompt } from "./llm/llmProxy";
-import { PrivateLLMRequest } from "./types";
-export const callLLM = async ({
-  prompt,
-  model,
-  systemPrompt,
-  promptParts,
-  configuration,
-  images,
-}: PrivateLLMRequest) => {
+import { LLMProviderEnum } from './llm/types';
+import { callLlmPrompt } from './llm/llmProxy';
+import { PrivateLLMRequest } from './types';
+export const callLLM = async ({ prompt, model, systemPrompt, promptParts, configuration, images }: PrivateLLMRequest) => {
   const { temperature, maxTokens, frequencyPenalty, presencePenalty } = configuration || {};
   try {
-
-
     if (!model) {
-      throw new Error("Model is required");
+      throw new Error('Model is required');
     }
     const provider = model.split('/')[0];
     const modelIdentifier = model.split('/')[1];
@@ -33,7 +24,7 @@ export const callLLM = async ({
     });
     return result;
   } catch (error) {
-    console.error("Error calling LLM:", error);
-    throw new Error("Error calling LLM");
+    console.error('Error calling LLM:', error);
+    throw new Error('Error calling LLM');
   }
 };
