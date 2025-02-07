@@ -2,6 +2,7 @@ export enum LLMProviderEnum {
     OpenAI = "openai",
     Anthropic = "anthropic",
     GoogleGemini = "google-gemini",
+    AzureOpenAi = "azure-openai",
     AwsBedrock = "aws-bedrock",
     Together = "together",
     Groq = "groq",
@@ -29,6 +30,9 @@ export const LLMModels = {
     [LLMProviderEnum.GoogleGemini]: [
         "gemini-1.5-pro-002",
         "gemini-1.5-flash-002",
+        "gemini-1.5-flash-8b-001",
+        "gemini-2.0-flash-001",
+        "gemini-2.0-flash-lite-preview-02-05",
         "gemini-2.0-flash-exp",
         "gemini-2.0-flash-thinking-exp",
         "gemini-exp-1206"
@@ -151,4 +155,16 @@ export interface LLMPromptParams {
         dynamicPart: string;
     };
     llmConfig: LLMConfig;
+    images?: ImageInfo[];
+}
+export interface ImageInfo {
+    path: string;
+    description?: string;
+    width?: number;
+    height?: number;
+    size?: number;
+    data?: string;
+    name?: string;
+    type?: string;
+    imageBinary?: string;
 }

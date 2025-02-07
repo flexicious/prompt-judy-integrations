@@ -1,18 +1,20 @@
 import { callLLM } from "./call-llm";
 import { evaluateResponse } from "./evaluate-response";
 import {
-  EvaluationRequest,
   EvaluationRunResult,
   EvaluationRunResultWithoutScore,
+  PrivateLLMEvaluationRequest,
 } from "./types";
 
-export const runEvaluation = async (body: EvaluationRequest) => {
+export const runEvaluation = async (body: PrivateLLMEvaluationRequest) => {
   const response = await callLLM({
     prompt: body.prompt,
     model: body.model,
     configuration: {
       temperature: body.configuration?.temperature,
       maxTokens: body.configuration?.maxTokens || 1024,
+      frequencyPenalty: body.configuration?.frequencyPenalty,
+      presencePenalty: body.configuration?.presencePenalty,
     },
   });
   const evaluationResult = await evaluateResponse({

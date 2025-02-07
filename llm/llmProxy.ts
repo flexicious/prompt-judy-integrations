@@ -6,7 +6,7 @@ import { callTogether } from "./together";
 import { callGroq } from "./groq";
 import { callOpenRouter } from "./openRouter";
 import { callBedrock } from "./bedrock";
-
+import { callAzureOpenAi } from "./azure";
 export const getEnv = (key: string) => {
     if (!process.env[key]) {
         throw new Error(`${key} is not available`);
@@ -21,6 +21,8 @@ export async function callLlmPrompt(provider: LLMProviderEnum, params: LLMPrompt
         return await callAnthropic(params);
     } else if (provider === LLMProviderEnum.GoogleGemini) {
         return await callGemini(params);
+    } else if (provider === LLMProviderEnum.AzureOpenAi) {
+        return await callAzureOpenAi(params);
     } else if (provider === LLMProviderEnum.Together) {
         return await callTogether(params);
     } else if (provider === LLMProviderEnum.Groq) {
@@ -32,14 +34,6 @@ export async function callLlmPrompt(provider: LLMProviderEnum, params: LLMPrompt
     } else {
         throw new Error(`Unsupported provider: ${provider}`);
     }
-}
-export const getHashCode = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
-        hash |= 0;
-    }
-    return hash;
 }
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

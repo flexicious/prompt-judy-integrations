@@ -1,3 +1,5 @@
+import { ImageInfo } from "llm/types";
+
 export interface PromptTemplate {
   name: string;
   description?: string;
@@ -45,19 +47,20 @@ export interface PrivateLLMRequest {
     dynamicPart: string;
   };
   model: string;
-  evaluationDataSetRow: EvaluationDataSetRow;
-  promptTemplateVersion: PromptTemplateVersion;
-  promptTemplate: PromptTemplate;
-  evaluationDataSet: EvaluationDataSet;
   configuration?: {
     temperature: number;
     maxTokens: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
   };
+  images?: ImageInfo[];
 }
 
-export interface EvaluationRequest extends PrivateLLMRequest {
+export interface PrivateLLMEvaluationRequest extends PrivateLLMRequest {
+  evaluationDataSetRow: EvaluationDataSetRow;
+  promptTemplateVersion: PromptTemplateVersion;
+  promptTemplate: PromptTemplate;
+  evaluationDataSet: EvaluationDataSet
   expectedResponse: string;
   actualResponse: string;
 }

@@ -1,27 +1,14 @@
 import { LLMProviderEnum } from "./llm/types";
 import { callLlmPrompt } from "./llm/llmProxy";
-
+import { PrivateLLMRequest } from "./types";
 export const callLLM = async ({
   prompt,
   model,
   systemPrompt,
   promptParts,
   configuration,
-}: {
-  prompt: string;
-  model: string;
-  systemPrompt?: string;
-  promptParts?: {
-    staticPart: string;
-    dynamicPart: string;
-  };
-  configuration?: {
-    temperature?: number;
-    maxTokens?: number;
-    frequencyPenalty?: number;
-    presencePenalty?: number;
-  };
-}) => {
+  images,
+}: PrivateLLMRequest) => {
   const { temperature, maxTokens, frequencyPenalty, presencePenalty } = configuration || {};
   try {
 
@@ -42,6 +29,7 @@ export const callLLM = async ({
         frequencyPenalty: frequencyPenalty || 0,
         presencePenalty: presencePenalty || 0,
       },
+      images,
     });
     return result;
   } catch (error) {

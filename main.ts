@@ -6,9 +6,9 @@ import * as path from "path";
 import * as dotenv from 'dotenv';
 import {
     PrivateLLMRequest,
-    EvaluationRequest,
     EvaluationRunResult,
     EvaluationRunResultWithoutScore,
+    PrivateLLMEvaluationRequest,
 } from "types";
 import { runEvaluation } from "./utils";
 import { evaluateResponse } from "./evaluate-response";
@@ -19,7 +19,7 @@ dotenv.config();
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(
     cors({
         origin: [
@@ -53,10 +53,7 @@ app.post("/sample-post", (req, res) => {
     });
 });
 app.post("/evaluate-response", async (req, res) => {
-    const body: {
-        expectedResponse: string;
-        actualResponse: string;
-    } = req.body as EvaluationRequest;
+    const body = req.body as PrivateLLMEvaluationRequest;
     try {
         const { score, scoreDetails } = await evaluateResponse(body);
         res.send({ score, scoreDetails });
@@ -72,7 +69,7 @@ app.post("/process-upload", async (req, res) => {
     }
     const fileContent = req.files.file as fileUpload.UploadedFile;
     const json = fileContent.data.toString("utf-8");
-    const data = JSON.parse(json) as EvaluationRequest[];
+    const data = JSON.parse(json) as PrivateLLMEvaluationRequest[];
     if (!Array.isArray(data)) {
         res.status(400).send("Invalid file format");
         return;

@@ -7,52 +7,73 @@ export const callAnthropic = async ({
     prompt,
     promptParts,
     systemPrompt,
-    llmConfig = {}
-}: LLMPromptParams): Promise<{ content: string, tokenUsage: TokenUsage, duration: number }> => {
+    llmConfig = {},
+    images,
+}: LLMPromptParams): Promise<{ content: string; tokenUsage: TokenUsage; duration: number }> => {
     const { staticPart, dynamicPart } = promptParts || { staticPart: '', dynamicPart: '' };
 
     const client = new Anthropic({
         dangerouslyAllowBrowser: true,
-        apiKey: getEnv(`ANTHROPIC_API_KEY`),
+        apiKey: getEnv('ANTHROPIC_API_KEY'),
     });
 
-    const messages: { role: 'user' | 'assistant', content: string, cache_control?: { type: 'ephemeral' } }[] = [];
-
+    const messages: Anthropic.Messages.MessageParam[] = [];
+    const imageMessages: Anthropic.Messages.ImageBlockParam[] = (images?.map((image) => ({
+        type: 'image' as const,
+        source: {
+            type: 'base64' as const,
+            media_type: image.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: image.imageBinary || '',
+        },
+        cache_control: { type: 'ephemeral' },
+    })) || []);
     if (staticPart && dynamicPart) {
         messages.push({
             role: 'user' as const,
-            content: staticPart,
-            cache_control: { type: 'ephemeral' }
+            content: [{ type: 'text', text: staticPart, cache_control: { type: 'ephemeral' } }],
+        });
+        imageMessages.forEach((imageMessage) => {
+            messages.push({
+                role: 'user' as const,
+                content: [imageMessage],
+            });
         });
 
-        const dynamicContent = Array.isArray(dynamicPart)
-            ? dynamicPart.map(item => item.text || item).join('\n')
-            : dynamicPart;
+        const dynamicContent = Array.isArray(dynamicPart) ? dynamicPart.map((item) => item.text || item).join('\n') : dynamicPart;
 
         messages.push({
             role: 'user' as const,
-            content: dynamicContent
+            content: [
+                { type: 'text' as const, text: dynamicContent },
+            ],
         });
     } else {
-        const promptContent = Array.isArray(prompt)
-            ? prompt.map(item => item.text || item).join('\n')
-            : prompt;
+        const promptContent = Array.isArray(prompt) ? prompt.map((item) => item.text || item).join('\n') : prompt;
 
         messages.push({
             role: 'user' as const,
-            content: promptContent
+            content: [
+                { type: 'text', text: promptContent },
+            ],
+        });
+        imageMessages.forEach((imageMessage) => {
+            messages.push({
+                role: 'user' as const,
+                content: [imageMessage],
+            });
         });
     }
 
     const isRateLimitedError = (error: unknown) => error instanceof Anthropic.RateLimitError;
-    const [response, duration] = await retryWithExponentialBackoff(async () =>
-        client.messages.create({
-            system: systemPrompt,
-            messages,
-            model: modelName,
-            max_tokens: llmConfig.maxTokens || 4096,
-            temperature: llmConfig.temperature || 0,
-        }),
+    const [response, duration] = await retryWithExponentialBackoff(
+        async () =>
+            client.messages.create({
+                system: systemPrompt,
+                messages,
+                model: modelName,
+                max_tokens: llmConfig.maxTokens || 4096,
+                temperature: llmConfig.temperature || 0,
+            }),
         isRateLimitedError
     );
 
@@ -65,8 +86,8 @@ export const callAnthropic = async ({
     };
 
     return {
-        content: "text" in response.content[0] ? response.content[0].text : "No content",
+        content: 'text' in response.content[0] ? response.content[0].text : 'No content',
         tokenUsage,
-        duration
+        duration,
     };
 };

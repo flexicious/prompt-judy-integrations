@@ -4,14 +4,17 @@ import { LLMPromptParams, TokenUsage } from './types';
 
 const googleGeminiCachedItems = new Map<string, [CachedContent, Date]>();
 const modelSupportsCache: Record<string, boolean> = {}
-const isRateLimitedError = (error: unknown) => error instanceof GoogleGenerativeAIFetchError && error.status === 429;
+const isRateLimitedError = (error: unknown) => error instanceof GoogleGenerativeAIFetchError
+    && (error.status === 429 || error.message.includes('The model is overloaded'));
 export const callGemini = async ({
     modelName,
     prompt,
     promptParts,
     systemPrompt,
-    llmConfig = {}
-}: LLMPromptParams): Promise<{ content: string, tokenUsage: TokenUsage, duration: number }> => {
+    llmConfig = {},
+    images,
+}: LLMPromptParams): Promise<{ content: string; tokenUsage: TokenUsage; duration: number }> => {
+
     const { staticPart, dynamicPart } = promptParts || { staticPart: '', dynamicPart: '' };
     const apiKey = getEnv(`GEMINI_API_KEY`);
     const maxOutputTokens = llmConfig.maxTokens || 4096;
@@ -26,23 +29,35 @@ export const callGemini = async ({
     const callUsingGemini = async () => {
         const client = new GoogleGenerativeAI(apiKey);
         const model = client.getGenerativeModel({ model: modelName, systemInstruction: systemPrompt });
-        const [response, generatedDuration] = await retryWithExponentialBackoff(async () =>
-            model.generateContent({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                generationConfig
-            }),
+        const [response, generatedDuration] = await retryWithExponentialBackoff(
+            async () =>
+                model.generateContent({
+                    contents: [{
+                        role: 'user',
+                        parts: [
+                            { text: prompt },
+                            ...(images?.map((image) => ({
+                                inlineData: {
+                                    mimeType: image.type || 'image/jpeg',
+                                    data: image.imageBinary || '',
+                                }
+                            })) || [])
+                        ]
+                    }],
+                    generationConfig,
+                }),
             isRateLimitedError
         );
         duration = generatedDuration;
         return await response.response;
-    }
+    };
     let duration = 0;
-
-    if (staticPart && dynamicPart && modelSupportsCache[modelName] !== false) {
+    let cacheCreationTokens = 0;
+    if ((staticPart && dynamicPart || (images?.length)) && modelSupportsCache[modelName] !== false) {
         try {
-            const cacheKey = `${modelName}-${(staticPart)}`;
+            const cacheKey = `${modelName}-${staticPart}-${images?.map(img => img.path).join('-') || ''}`;
             let [cachedContent, expirationDate] = googleGeminiCachedItems.get(cacheKey) || [null, null];
-            if (!cachedContent || expirationDate && expirationDate < new Date()) {
+            if (!cachedContent || (expirationDate && expirationDate < new Date())) {
                 const cacheResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/cachedContents?key=${apiKey}`, {
                     method: 'POST',
                     headers: {
@@ -50,20 +65,32 @@ export const callGemini = async ({
                     },
                     body: JSON.stringify({
                         model: `models/${modelName}`,
-                        contents: [{
-                            parts: [{
-                                inline_data: {
-                                    mime_type: 'text/plain',
-                                    data: Buffer.from(staticPart).toString('base64')
-                                }
-                            }],
-                            role: 'user'
-                        }],
-                        systemInstruction: systemPrompt ? {
-                            parts: [{ text: systemPrompt }]
-                        } : undefined,
-                        ttl: `${ttlSeconds}s`
-                    })
+                        contents: [
+                            {
+                                parts: [
+                                    ...(staticPart ? [{
+                                        inline_data: {
+                                            mime_type: 'text/plain',
+                                            data: Buffer.from(staticPart).toString('base64'),
+                                        },
+                                    }] : []),
+                                    ...(images?.map((image) => ({
+                                        inline_data: {
+                                            mime_type: image.type,
+                                            data: image.imageBinary,
+                                        },
+                                    })) || []),
+                                ],
+                                role: 'user',
+                            },
+                        ],
+                        systemInstruction: systemPrompt
+                            ? {
+                                parts: [{ text: systemPrompt }],
+                            }
+                            : undefined,
+                        ttl: `${ttlSeconds}s`,
+                    }),
                 });
                 if (!cacheResponse.ok) {
                     const error = await cacheResponse.json();
@@ -78,6 +105,7 @@ export const callGemini = async ({
                 }
                 if (cachedContent) {
                     googleGeminiCachedItems.set(cacheKey, [cachedContent, expirationDate]);
+                    cacheCreationTokens = cacheData.usageMetadata.totalTokenCount;
                 }
             }
             const [generateResponse, generatedDuration] = await retryWithExponentialBackoff(async () => {
@@ -87,13 +115,15 @@ export const callGemini = async ({
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: dynamicPart }],
-                            role: 'user'
-                        }],
+                        contents: [
+                            {
+                                parts: staticPart ? [{ text: dynamicPart }] : [{ text: prompt }],
+                                role: 'user',
+                            },
+                        ],
                         cachedContent: cachedContent?.name,
-                        generationConfig
-                    })
+                        generationConfig,
+                    }),
                 });
                 if (!response.ok) {
                     const error = await response.json();
@@ -119,7 +149,7 @@ export const callGemini = async ({
         outputTokens: usage?.candidatesTokenCount || 0,
         totalTokens: usage?.totalTokenCount || 0,
         cacheReadInputTokens: usage?.cachedContentTokenCount || 0,
-        cacheCreationInputTokens: 0,
+        cacheCreationInputTokens: cacheCreationTokens,
     };
 
     return { content: text || '', tokenUsage, duration };
