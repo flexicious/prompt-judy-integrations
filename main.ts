@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'https://promptjudy.com', 'https://promptjudy.lambdagenie.com'],
+    origin: ['http://localhost:3000', 'https://app.promptjudy.com', 'https://promptjudy.com', 'https://promptjudy.lambdagenie.com'],
     methods: ['GET', 'POST'],
   })
 );

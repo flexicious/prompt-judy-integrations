@@ -31,7 +31,10 @@ export const callAnthropic = async ({
   if (staticPart && dynamicPart) {
     messages.push({
       role: 'user' as const,
-      content: [{ type: 'text', text: staticPart, cache_control: { type: 'ephemeral' } }],
+      content: [{
+        type: 'text', text: staticPart,
+        ...(imageMessages.length < 4 ? { cache_control: { type: 'ephemeral' } } : {})
+      }],
     });
     imageMessages.forEach((imageMessage) => {
       messages.push({

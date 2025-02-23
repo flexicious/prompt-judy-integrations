@@ -1,15 +1,11 @@
-import { BedrockRuntimeClient, ConverseCommand, SystemContentBlock, ThrottlingException } from '@aws-sdk/client-bedrock-runtime';
+import { BedrockRuntimeClient, ConverseCommand, ConverseCommandInput, SystemContentBlock, ThrottlingException } from '@aws-sdk/client-bedrock-runtime';
 import { getEnv, retryWithExponentialBackoff } from './llmProxy';
 import { TokenUsage, LLMPromptParams } from './types';
 
-export const callBedrock = async ({
-  modelName,
-  prompt,
-  promptParts,
-  systemPrompt,
-  llmConfig = {},
-}: LLMPromptParams): Promise<{ content: string; tokenUsage: TokenUsage; duration: number }> => {
-  const isClaude = modelName.includes('claude');
+export const callBedrock = async (
+  {
+    promptParts, modelName, prompt, systemPrompt, llmConfig = {}, images }: LLMPromptParams,
+): Promise<{ content: string; tokenUsage: TokenUsage; duration: number }> => {
   const client = new BedrockRuntimeClient({
     region: getEnv('AWS_REGION'),
     // credentials: {
@@ -18,7 +14,14 @@ export const callBedrock = async ({
     // }
   });
 
-  const messages = [];
+  const messages: ConverseCommandInput['messages'] = [];
+
+  const imageContent = images?.map(image => ({
+    text: '',
+    type: 'image',
+    data: image.imageBinary || '',
+    mediaType: image.type || 'image/jpeg'
+  })) || [];
 
   if (promptParts?.staticPart && promptParts?.dynamicPart) {
     messages.push({
@@ -26,22 +29,20 @@ export const callBedrock = async ({
       content: [
         {
           text: promptParts.staticPart,
-          ...(isClaude
-            ? {
-                cache_control: {
-                  type: 'ephemeral',
-                },
-              }
-            : {}),
+
         },
         // { "cachePoint": { "type": "default" } }, It does not appear this is supported just yet.
         { text: promptParts.dynamicPart },
+        ...imageContent
       ],
     });
   } else {
     messages.push({
       role: 'user',
-      content: [{ text: prompt }],
+      content: [
+        { text: prompt || '' },
+        ...imageContent
+      ],
     });
   }
 
@@ -63,16 +64,20 @@ export const callBedrock = async ({
     isRateLimitedError
   );
 
-  // Extract response content
-  const responseContent = response.output.message?.content?.[0]?.text || 'No content';
-
-  // Map token usage
-  const tokenUsage: TokenUsage = {
-    inputTokens: response.usage?.inputTokens || 0,
-    outputTokens: response.usage?.outputTokens || 0,
-    totalTokens: (response.usage?.inputTokens || 0) + (response.usage?.outputTokens || 0),
-    cacheReadInputTokens: 0, // Bedrock doesn't provide these metrics
-    cacheCreationInputTokens: 0, // Bedrock doesn't provide these metrics
+  const responseContent = response.output?.message?.content?.[0]?.text || 'No content';
+  const usage = response.usage;
+  const tokenUsage: TokenUsage = usage ? {
+    inputTokens: usage.inputTokens || 0,
+    outputTokens: usage.outputTokens || 0,
+    totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
+    cacheReadInputTokens: "cacheReadInputTokens" in usage ? usage.cacheReadInputTokens as number : 0,
+    cacheCreationInputTokens: "cacheCreationInputTokens" in usage ? usage.cacheCreationInputTokens as number : 0,
+  } : {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    cacheReadInputTokens: 0,
+    cacheCreationInputTokens: 0,
   };
 
   return {
