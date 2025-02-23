@@ -1,6 +1,14 @@
-import { BedrockRuntimeClient, ConverseCommand, SystemContentBlock, ThrottlingException } from '@aws-sdk/client-bedrock-runtime';
+import {
+  BedrockRuntimeClient,
+  ContentBlock,
+  ConverseCommand,
+  ConverseCommandInput,
+  ImageFormat,
+  SystemContentBlock,
+  ThrottlingException,
+} from '@aws-sdk/client-bedrock-runtime';
 import { getEnv, retryWithExponentialBackoff } from './llmProxy';
-import { TokenUsage, LLMPromptParams } from './types';
+import { TokenUsage, LLMPromptParams, ImageInfo } from './types';
 
 export const callBedrock = async ({
   modelName,
@@ -18,16 +26,25 @@ export const callBedrock = async ({
     //     secretAccessKey: getEnv('AWS_SECRET_ACCESS_KEY')
     // }
   });
-  const imageBlocks = images?.map((image) => ({
+  const nonNullImages: ImageInfo[] = images?.filter((image) => image.imageBinary) || [];
+  const getImageFormat = (image: ImageInfo) => {
+    if (image.type?.includes('png')) return ImageFormat.PNG;
+    if (image.type?.includes('jpeg')) return ImageFormat.JPEG;
+    if (image.type?.includes('gif')) return ImageFormat.GIF;
+    if (image.type?.includes('webp')) return ImageFormat.WEBP;
+    return ImageFormat.PNG;
+  };
+
+  const imageBlocks: ContentBlock.ImageMember[] = nonNullImages.map((image) => ({
     image: {
-      format: ['png', 'jpeg', 'gif', 'webp'].find((format) => image.type.includes(format)) || 'png',
+      format: getImageFormat(image),
       source: {
-        bytes: Buffer.from(image.imageBinary, 'base64'),
+        bytes: Buffer.from(image.imageBinary || '', 'base64'),
       },
     },
   }));
 
-  const messages = [];
+  const messages: ConverseCommandInput['messages'] = [];
 
   if (promptParts?.staticPart && promptParts?.dynamicPart) {
     messages.push({
@@ -35,15 +52,8 @@ export const callBedrock = async ({
       content: [
         {
           text: promptParts.staticPart,
-          ...(isClaude
-            ? {
-              cache_control: {
-                type: 'ephemeral',
-              },
-            }
-            : {}),
         },
-        ...imageBlocks,
+        ...(imageBlocks || []),
         // { "cachePoint": { "type": "default" } }, It does not appear this is supported just yet.
         { text: promptParts.dynamicPart },
       ],
@@ -51,7 +61,7 @@ export const callBedrock = async ({
   } else {
     messages.push({
       role: 'user',
-      content: [{ text: prompt }, ...imageBlocks],
+      content: [{ text: prompt }, ...(imageBlocks || [])],
     });
   }
 
@@ -74,20 +84,22 @@ export const callBedrock = async ({
   );
 
   const responseContent = response.output?.message?.content?.[0]?.text || 'No content';
-  const usage = response.usage;
-  const tokenUsage: TokenUsage = usage ? {
-    inputTokens: usage.inputTokens || 0,
-    outputTokens: usage.outputTokens || 0,
-    totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
-    cacheReadInputTokens: "cacheReadInputTokens" in usage ? usage.cacheReadInputTokens as number : 0,
-    cacheCreationInputTokens: "cacheCreationInputTokens" in usage ? usage.cacheCreationInputTokens as number : 0,
-  } : {
-    inputTokens: 0,
-    outputTokens: 0,
-    totalTokens: 0,
-    cacheReadInputTokens: 0,
-    cacheCreationInputTokens: 0,
-  };
+  const usage = response.usage as any;
+  const tokenUsage: TokenUsage = usage
+    ? {
+        inputTokens: usage.inputTokens || 0,
+        outputTokens: usage.outputTokens || 0,
+        totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
+        cacheReadInputTokens: 'cacheReadInputTokens' in usage ? (usage.cacheReadInputTokens as number) : 0,
+        cacheCreationInputTokens: 'cacheCreationInputTokens' in usage ? (usage.cacheCreationInputTokens as number) : 0,
+      }
+    : {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
+      };
 
   return {
     content: responseContent,
@@ -95,4 +107,3 @@ export const callBedrock = async ({
     duration,
   };
 };
-
