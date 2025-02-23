@@ -37,10 +37,10 @@ export const callBedrock = async ({
           text: promptParts.staticPart,
           ...(isClaude
             ? {
-                cache_control: {
-                  type: 'ephemeral',
-                },
-              }
+              cache_control: {
+                type: 'ephemeral',
+              },
+            }
             : {}),
         },
         ...imageBlocks,
@@ -73,16 +73,20 @@ export const callBedrock = async ({
     isRateLimitedError
   );
 
-  // Extract response content
-  const responseContent = response.output.message?.content?.[0]?.text || 'No content';
-
-  // Map token usage
-  const tokenUsage: TokenUsage = {
-    inputTokens: response.usage?.inputTokens || 0,
-    outputTokens: response.usage?.outputTokens || 0,
-    totalTokens: (response.usage?.inputTokens || 0) + (response.usage?.outputTokens || 0),
-    cacheReadInputTokens: 0, // Bedrock doesn't provide these metrics
-    cacheCreationInputTokens: 0, // Bedrock doesn't provide these metrics
+  const responseContent = response.output?.message?.content?.[0]?.text || 'No content';
+  const usage = response.usage;
+  const tokenUsage: TokenUsage = usage ? {
+    inputTokens: usage.inputTokens || 0,
+    outputTokens: usage.outputTokens || 0,
+    totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
+    cacheReadInputTokens: "cacheReadInputTokens" in usage ? usage.cacheReadInputTokens as number : 0,
+    cacheCreationInputTokens: "cacheCreationInputTokens" in usage ? usage.cacheCreationInputTokens as number : 0,
+  } : {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    cacheReadInputTokens: 0,
+    cacheCreationInputTokens: 0,
   };
 
   return {
@@ -91,3 +95,4 @@ export const callBedrock = async ({
     duration,
   };
 };
+
